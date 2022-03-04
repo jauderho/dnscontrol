@@ -1052,11 +1052,12 @@ func makeTests(t *testing.T) []*TestGroup {
 
 		testgroup("pager1201",
 			only(
-				//"MSDNS",         //  No paging done. No need to test.
-				//"AKAMAIEDGEDNS", //  No paging done. No need to test.
+				//"AKAMAIEDGEDNS", // No paging done. No need to test.
 				//"AZURE_DNS",     // Currently failing. See https://github.com/StackExchange/dnscontrol/issues/770
+				//"CLOUDFLAREAPI", // Fails with >1000 corrections. See https://github.com/StackExchange/dnscontrol/issues/1440
 				"HEXONET",
 				"HOSTINGDE",
+				//"MSDNS",         // No paging done. No need to test.
 				"ROUTE53",
 			),
 			tc("1200 records", manyA("rec%04d", "1.2.3.4", 1200)...),
@@ -1111,6 +1112,7 @@ func makeTests(t *testing.T) []*TestGroup {
 
 		// SOA
 		testgroup("SOA", requires(providers.CanUseSOA),
+			clear(), // Extra clear required or only the first run passes.
 			tc("Create SOA record", soa("@", "kim.ns.cloudflare.com.", "dns.cloudflare.com.", 2037190000, 10000, 2400, 604800, 3600)),
 			tc("Modify SOA ns    ", soa("@", "mmm.ns.cloudflare.com.", "dns.cloudflare.com.", 2037190000, 10000, 2400, 604800, 3600)),
 			tc("Modify SOA mbox  ", soa("@", "mmm.ns.cloudflare.com.", "eee.cloudflare.com.", 2037190000, 10000, 2400, 604800, 3600)),
@@ -1118,8 +1120,6 @@ func makeTests(t *testing.T) []*TestGroup {
 			tc("Modify SOA retry ", soa("@", "mmm.ns.cloudflare.com.", "eee.cloudflare.com.", 2037190000, 10001, 2401, 604800, 3600)),
 			tc("Modify SOA expire", soa("@", "mmm.ns.cloudflare.com.", "eee.cloudflare.com.", 2037190000, 10001, 2401, 604801, 3600)),
 			tc("Modify SOA minttl", soa("@", "mmm.ns.cloudflare.com.", "eee.cloudflare.com.", 2037190000, 10001, 2401, 604801, 3601)),
-			clear(),
-			tc("Create SOA record", soa("@", "kim.ns.cloudflare.com.", "dns.cloudflare.com.", 2037190000, 10000, 2400, 604800, 3600)),
 		),
 
 		testgroup("SRV", requires(providers.CanUseSRV), not("ACTIVEDIRECTORY_PS"),
