@@ -11,12 +11,12 @@ import (
 	"time"
 
 	"github.com/StackExchange/dnscontrol/v3/models"
+	"github.com/StackExchange/dnscontrol/v3/pkg/credsfile"
 	"github.com/StackExchange/dnscontrol/v3/pkg/nameservers"
 	"github.com/StackExchange/dnscontrol/v3/pkg/normalize"
 	"github.com/StackExchange/dnscontrol/v3/providers"
 	_ "github.com/StackExchange/dnscontrol/v3/providers/_all"
 	"github.com/StackExchange/dnscontrol/v3/providers/cloudflare"
-	"github.com/StackExchange/dnscontrol/v3/providers/config"
 	"github.com/miekg/dns/dnsutil"
 )
 
@@ -37,7 +37,7 @@ func getProvider(t *testing.T) (providers.DNSServiceProvider, string, map[int]bo
 		t.Log("No provider specified with -provider")
 		return nil, "", nil, nil
 	}
-	jsons, err := config.LoadProviderConfigs("providers.json")
+	jsons, err := credsfile.LoadProviderConfigs("providers.json")
 	if err != nil {
 		t.Fatalf("Error loading provider configs: %s", err)
 	}
@@ -330,7 +330,8 @@ func TestDualProviders(t *testing.T) {
 	run()
 	// add bogus nameservers
 	dc.Records = []*models.RecordConfig{}
-	dc.Nameservers = append(dc.Nameservers, models.StringsToNameservers([]string{"ns1.example.com", "ns2.example.com"})...)
+	nslist, _ := models.ToNameservers([]string{"ns1.example.com", "ns2.example.com"})
+	dc.Nameservers = append(dc.Nameservers, nslist...)
 	nameservers.AddNSRecords(dc)
 	t.Log("Adding nameservers from another provider")
 	run()
@@ -757,6 +758,7 @@ func makeTests(t *testing.T) []*TestGroup {
 		testgroup("Null MX",
 			// These providers don't support RFC 7505
 			not(
+				"AUTODNS",
 				"AZURE_DNS",
 				"DIGITALOCEAN",
 				"DNSIMPLE",
@@ -1073,19 +1075,27 @@ func makeTests(t *testing.T) []*TestGroup {
 			tc("CAA record", caa("@", "issue", 0, "letsencrypt.org")),
 			tc("CAA change tag", caa("@", "issuewild", 0, "letsencrypt.org")),
 			tc("CAA change target", caa("@", "issuewild", 0, "example.com")),
-			tc("CAA change flag", caa("@", "issuewild", 128, "example.com")),
 			tc("CAA many records",
 				caa("@", "issue", 0, "letsencrypt.org"),
 				caa("@", "issuewild", 0, "comodoca.com"),
-				caa("@", "iodef", 128, "mailto:test@example.com")),
+				caa("@", "iodef", 0, "mailto:test@example.com")),
 			tc("CAA delete", caa("@", "issue", 0, "letsencrypt.org")),
+		),
+		testgroup("CAA noflag",
+			requires(providers.CanUseCAA), not("LINODE"),
+			// LINODE can only set the flag to "0".
+			// https://www.linode.com/community/questions/20714/how-to-i-change-the-flag-in-a-caa-record
+			// Consolidate any tests with a non-zero flag to this testgroup
+			// so they can be easily skipped.
+			tc("CAA flag0", caa("@", "issuewild", 0, "example.com")),
+			tc("CAA change flag", caa("@", "issuewild", 128, "example.com")),
 		),
 		testgroup("CAA with ;",
 			requires(providers.CanUseCAA), not("DIGITALOCEAN"),
 			// Test support of ";" as a value
 			tc("CAA many records", caa("@", "issuewild", 0, ";")),
 		),
-		testgroup("Issue 1374",
+		testgroup("CAA Issue 1374",
 			requires(providers.CanUseCAA), not("DIGITALOCEAN"),
 			// Test support of spaces in the 3rd field.
 			tc("CAA spaces", caa("@", "issue", 0, "letsencrypt.org; validationmethods=dns-01; accounturi=https://acme-v02.api.letsencrypt.org/acme/acct/1234")),
@@ -1201,15 +1211,15 @@ func makeTests(t *testing.T) []*TestGroup {
 			// Use a valid digest value here.  Some providers verify that a valid digest is in use.  See RFC 4034 and
 			// https://www.iana.org/assignments/dns-sec-alg-numbers/dns-sec-alg-numbers.xhtml
 			// https://www.iana.org/assignments/ds-rr-types/ds-rr-types.xhtml
-			tc("DSchild create", ds("child", 1, 13, 1, "da39a3ee5e6b4b0d3255bfef95601890afd80709")),
+			tc("DSchild create", ds("child", 1, 14, 4, "417212fd1c8bc5896fefd8db58af824545e85b0d0546409366a30aef7269fae258173bd185fb262c86f3bb86fba04368")),
 			tc("DSchild change", ds("child", 8857, 8, 2, "4b9b6b073edd97feb5bc12dc4e1b32d2c6af7ae23a293936ceb87bb10494ec44")),
 			tc("DSchild change f1", ds("child", 3, 8, 2, "4b9b6b073edd97feb5bc12dc4e1b32d2c6af7ae23a293936ceb87bb10494ec44")),
 			tc("DSchild change f2", ds("child", 3, 13, 2, "4b9b6b073edd97feb5bc12dc4e1b32d2c6af7ae23a293936ceb87bb10494ec44")),
-			tc("DSchild change f3+4", ds("child", 3, 13, 1, "da39a3ee5e6b4b0d3255bfef95601890afd80709")),
+			tc("DSchild change f3+4", ds("child", 3, 14, 4, "3115238f89e0bf5252d9718113b1b9fff854608d84be94eefb9210dc1cc0b4f3557342a27465cfacc42ef137ae9a5489")),
 			tc("DSchild delete 1, create child", ds("another-child", 44, 13, 2, "4b9b6b073edd97feb5bc12dc4e1b32d2c6af7ae23a293936ceb87bb10494ec44")),
 			tc("add 2 more DSchild",
 				ds("another-child", 44, 13, 2, "4b9b6b073edd97feb5bc12dc4e1b32d2c6af7ae23a293936ceb87bb10494ec44"),
-				ds("another-child", 1501, 13, 1, "ee02c885b5b4ed64899f2d43eb2b8e6619bdb50c"),
+				ds("another-child", 1501, 14, 4, "109bb6b5b6d5547c1ce03c7a8bd7d8f80c1cb0957f50c4f7fda04692079917e4f9cad52b878f3d8234e1a170b154b72d"),
 				ds("another-child", 1502, 8, 2, "2fa14f53e6b15cac9ac77846c7be87862c2a7e9ec0c6cea319db939317f126ed"),
 				ds("another-child", 65535, 13, 2, "2fa14f53e6b15cac9ac77846c7be87862c2a7e9ec0c6cea319db939317f126ed"),
 			),
