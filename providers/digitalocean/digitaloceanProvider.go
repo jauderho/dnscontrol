@@ -12,9 +12,8 @@ import (
 	"github.com/StackExchange/dnscontrol/v3/pkg/diff"
 	"github.com/StackExchange/dnscontrol/v3/pkg/txtutil"
 	"github.com/StackExchange/dnscontrol/v3/providers"
-	"github.com/miekg/dns/dnsutil"
-
 	"github.com/digitalocean/godo"
+	"github.com/miekg/dns/dnsutil"
 	"golang.org/x/oauth2"
 )
 
@@ -73,7 +72,7 @@ retry:
 
 var features = providers.DocumentationNotes{
 	providers.CanGetZones:            providers.Can(),
-	providers.CanUseCAA:              providers.Can("Semicolons not supported in issue/issuewild fields.", "https://www.digitalocean.com/docs/networking/dns/how-to/create-caa-records"),
+	providers.CanUseCAA:              providers.Can(),
 	providers.CanUseSRV:              providers.Can(),
 	providers.DocCreateDomains:       providers.Can(),
 	providers.DocOfficiallySupported: providers.Cannot(),

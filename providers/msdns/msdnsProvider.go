@@ -2,10 +2,10 @@ package msdns
 
 import (
 	"encoding/json"
-	"github.com/StackExchange/dnscontrol/v3/pkg/printer"
 	"runtime"
 
 	"github.com/StackExchange/dnscontrol/v3/models"
+	"github.com/StackExchange/dnscontrol/v3/pkg/printer"
 	"github.com/StackExchange/dnscontrol/v3/pkg/txtutil"
 	"github.com/StackExchange/dnscontrol/v3/providers"
 )
@@ -34,7 +34,8 @@ var features = providers.DocumentationNotes{
 }
 
 // Register with the dnscontrol system.
-//   This establishes the name (all caps), and the function to call to initialize it.
+//
+//	This establishes the name (all caps), and the function to call to initialize it.
 func init() {
 	fns := providers.DspFuncs{
 		Initializer:   newDNS,
@@ -46,7 +47,7 @@ func init() {
 func newDNS(config map[string]string, metadata json.RawMessage) (providers.DNSServiceProvider, error) {
 
 	if runtime.GOOS != "windows" {
-		printer.Printf("INFO: PowerShell not available. Disabling Active Directory provider.")
+		printer.Println("INFO: MSDNS deactivated. Required OS not detected.")
 		return providers.None{}, nil
 	}
 
