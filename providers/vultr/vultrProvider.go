@@ -85,7 +85,7 @@ func (api *vultrProvider) GetZoneRecords(domain string) (models.Records, error) 
 		}
 		currentI := 0
 		for i, record := range records {
-			r, err := toRecordConfig(domain, &record)
+			r, err := toRecordConfig(domain, record)
 			if err != nil {
 				return nil, err
 			}
@@ -126,7 +126,7 @@ func (api *vultrProvider) GetDomainCorrections(dc *models.DomainConfig) ([]*mode
 	var corrections []*models.Correction
 
 	for _, mod := range delete {
-		id := mod.Existing.Original.(*govultr.DomainRecord).ID
+		id := mod.Existing.Original.(govultr.DomainRecord).ID
 		corrections = append(corrections, &models.Correction{
 			Msg: fmt.Sprintf("%s; Vultr RecordID: %v", mod.String(), id),
 			F: func() error {
@@ -140,18 +140,18 @@ func (api *vultrProvider) GetDomainCorrections(dc *models.DomainConfig) ([]*mode
 		corrections = append(corrections, &models.Correction{
 			Msg: mod.String(),
 			F: func() error {
-				_, err := api.client.DomainRecord.Create(context.Background(), dc.Name, &govultr.DomainRecordReq{r.Name, r.Type, r.Data, r.TTL, &r.Priority})
+				_, err := api.client.DomainRecord.Create(context.Background(), dc.Name, &govultr.DomainRecordReq{Name: r.Name, Type: r.Type, Data: r.Data, TTL: r.TTL, Priority: &r.Priority})
 				return err
 			},
 		})
 	}
 
 	for _, mod := range modify {
-		r := toVultrRecord(dc, mod.Desired, mod.Existing.Original.(*govultr.DomainRecord).ID)
+		r := toVultrRecord(dc, mod.Desired, mod.Existing.Original.(govultr.DomainRecord).ID)
 		corrections = append(corrections, &models.Correction{
 			Msg: fmt.Sprintf("%s; Vultr RecordID: %v", mod.String(), r.ID),
 			F: func() error {
-				return api.client.DomainRecord.Update(context.Background(), dc.Name, r.ID, &govultr.DomainRecordReq{r.Name, r.Type, r.Data, r.TTL, &r.Priority})
+				return api.client.DomainRecord.Update(context.Background(), dc.Name, r.ID, &govultr.DomainRecordReq{Name: r.Name, Type: r.Type, Data: r.Data, TTL: r.TTL, Priority: &r.Priority})
 			},
 		})
 	}
@@ -173,7 +173,7 @@ func (api *vultrProvider) EnsureDomainExists(domain string) error {
 	}
 
 	// Vultr requires an initial IP, use a dummy one.
-	_, err := api.client.Domain.Create(context.Background(), &govultr.DomainReq{domain, "0.0.0.0", "disabled"})
+	_, err := api.client.Domain.Create(context.Background(), &govultr.DomainReq{Domain: domain, IP: "0.0.0.0", DNSSec: "disabled"})
 	return err
 }
 
@@ -204,8 +204,9 @@ func (api *vultrProvider) isDomainInAccount(domain string) (bool, error) {
 }
 
 // toRecordConfig converts a Vultr DomainRecord to a RecordConfig. #rtype_variations
-func toRecordConfig(domain string, r *govultr.DomainRecord) (*models.RecordConfig, error) {
+func toRecordConfig(domain string, r govultr.DomainRecord) (*models.RecordConfig, error) {
 	origin, data := domain, r.Data
+
 	rc := &models.RecordConfig{
 		TTL:      uint32(r.TTL),
 		Original: r,
