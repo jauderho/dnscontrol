@@ -11,7 +11,7 @@ require (
 	github.com/DisposaBoy/JsonConfigReader v0.0.0-20201129172854-99cf318d67e7
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/TomOnTime/utfutil v0.0.0-20210710122150-437f72b26edf
-	github.com/akamai/AkamaiOPEN-edgegrid-golang v1.2.1
+	github.com/akamai/AkamaiOPEN-edgegrid-golang v1.2.2
 	github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883
 	github.com/aws/aws-sdk-go-v2 v1.17.4
 	github.com/aws/aws-sdk-go-v2/config v1.18.13
