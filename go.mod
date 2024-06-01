@@ -46,7 +46,7 @@ require (
 	github.com/pquerna/otp v1.4.0
 	github.com/qdm12/reprint v0.0.0-20200326205758-722754a53494
 	github.com/robertkrimen/otto v0.4.0
-	github.com/softlayer/softlayer-go v1.1.3
+	github.com/softlayer/softlayer-go v1.1.4
 	github.com/stretchr/testify v1.9.0
 	github.com/transip/gotransip/v6 v6.24.0
 	github.com/urfave/cli/v2 v2.27.2
@@ -126,7 +126,6 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/kolo/xmlrpc v0.0.0-20220921171641-a4b6fa1dd06b // indirect
-	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
@@ -134,6 +133,7 @@ require (
 	github.com/peterhellberg/link v1.1.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
