@@ -53,8 +53,8 @@ require (
 	github.com/transip/gotransip/v6 v6.25.0
 	github.com/urfave/cli/v2 v2.27.3
 	github.com/xddxdd/ottoext v0.0.0-20221109171055-210517fa4419
-	golang.org/x/crypto v0.25.0 // indirect
-	golang.org/x/net v0.27.0
+	golang.org/x/crypto v0.26.0 // indirect
+	golang.org/x/net v0.28.0
 	golang.org/x/oauth2 v0.22.0
 	google.golang.org/api v0.190.0
 	gopkg.in/ns1/ns1-go.v2 v2.12.0
@@ -73,7 +73,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20
 	github.com/vultr/govultr/v2 v2.17.2
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
-	golang.org/x/text v0.16.0
+	golang.org/x/text v0.17.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -155,8 +155,8 @@ require (
 	go.opentelemetry.io/otel/metric v1.24.0 // indirect
 	go.opentelemetry.io/otel/trace v1.24.0 // indirect
 	golang.org/x/mod v0.19.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.22.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
+	golang.org/x/sys v0.23.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.23.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240725223205-93522f1f2a9f // indirect
