@@ -59,7 +59,7 @@ require (
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.15.0
 	github.com/G-Core/gcore-dns-sdk-go v0.2.9
-	github.com/fatih/color v1.17.0
+	github.com/fatih/color v1.18.0
 	github.com/fbiville/markdown-table-formatter v0.3.0
 	github.com/go-acme/lego/v4 v4.19.2
 	github.com/google/go-cmp v0.6.0
