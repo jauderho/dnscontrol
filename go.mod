@@ -64,7 +64,7 @@ require (
 	github.com/containrrr/shoutrrr v0.8.0
 	github.com/fatih/color v1.18.0
 	github.com/fbiville/markdown-table-formatter v0.3.0
-	github.com/go-acme/lego/v4 v4.22.2
+	github.com/go-acme/lego/v4 v4.23.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.142

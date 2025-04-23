@@ -139,8 +139,8 @@ github.com/getkin/kin-openapi v0.87.0/go.mod h1:660oXbgy5JFMKreazJaQTw7o+X00qeSy
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/gin-contrib/sse v0.1.0/go.mod h1:RHrZQHXnP2xjPF+u1gW/2HnVO7nvIa9PG3Gm+fLHvGI=
 github.com/gin-gonic/gin v1.7.4/go.mod h1:jD2toBW3GZUr5UMcdrwQA10I7RuaFOl/SGeDjXkfUtY=
-github.com/go-acme/lego/v4 v4.22.2 h1:ck+HllWrV/rZGeYohsKQ5iKNnU/WAZxwOdiu6cxky+0=
-github.com/go-acme/lego/v4 v4.22.2/go.mod h1:E2FndyI3Ekv0usNJt46mFb9LVpV/XBYT+4E3tz02Tzo=
+github.com/go-acme/lego/v4 v4.23.1 h1:lZ5fGtGESA2L9FB8dNTvrQUq3/X4QOb8ExkKyY7LSV4=
+github.com/go-acme/lego/v4 v4.23.1/go.mod h1:7UMVR7oQbIYw6V7mTgGwi4Er7B6Ww0c+c8feiBM0EgI=
 github.com/go-chi/chi/v5 v5.0.0/go.mod h1:BBug9lr0cqtdAhsu6R4AAdvufI0/XBzAQSsUqJpoZOs=
 github.com/go-gandi/go-gandi v0.7.0 h1:gsP33dUspsN1M+ZW9HEgHchK9HiaSkYnltO73RHhSZA=
 github.com/go-gandi/go-gandi v0.7.0/go.mod h1:9NoYyfWCjFosClPiWjkbbRK5UViaZ4ctpT8/pKSSFlw=
