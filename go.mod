@@ -71,7 +71,7 @@ require (
 	github.com/luadns/luadns-go v0.3.0
 	github.com/mattn/go-isatty v0.0.20
 	github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
-	github.com/oracle/oci-go-sdk/v65 v65.102.0
+	github.com/oracle/oci-go-sdk/v65 v65.103.0
 	github.com/vultr/govultr/v2 v2.17.2
 	golang.org/x/exp v0.0.0-20251009144603-d2f985daa21b
 	golang.org/x/text v0.30.0
