@@ -3,10 +3,12 @@ package openprovider
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestAPITokenReuse(t *testing.T) {
@@ -83,6 +85,84 @@ func TestAPIReauthenticatesAfterUnauthorized(t *testing.T) {
 	}
 	if authCalls != 2 || zoneCalls != 2 {
 		t.Fatalf("calls auth=%d zone=%d, want 2 each", authCalls, zoneCalls)
+	}
+}
+
+func TestAPIRetriesTransientOpenproviderError(t *testing.T) {
+	updateCalls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/auth/login":
+			writeJSON(t, w, http.StatusOK, `{"code":0,"data":{"token":"token"},"desc":""}`)
+		case "/dns/zones/example.com":
+			updateCalls++
+			if updateCalls < 3 {
+				writeJSON(t, w, http.StatusBadRequest, `{"code":18002,"data":"","desc":"Data you sent is invalid or service is not available, try again later"}`)
+				return
+			}
+			writeJSON(t, w, http.StatusOK, `{"code":0,"data":{"success":true},"desc":""}`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	client := testAPIClient(t, server.URL)
+	client.sleep = func(time.Duration) {}
+	if err := client.updateZone(apiZone{ID: 1, Name: "example.com"}, recordUpdates{Add: []apiRecord{{Type: "A", Value: "192.0.2.1", TTL: 900}}}); err != nil {
+		t.Fatalf("updateZone: %v", err)
+	}
+	if updateCalls != 3 {
+		t.Fatalf("update calls = %d, want 3", updateCalls)
+	}
+}
+
+func TestAPIDoesNotRetryOtherBadRequest(t *testing.T) {
+	updateCalls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/auth/login" {
+			writeJSON(t, w, http.StatusOK, `{"code":0,"data":{"token":"token"},"desc":""}`)
+			return
+		}
+		updateCalls++
+		writeJSON(t, w, http.StatusBadRequest, `{"code":12345,"data":"","desc":"invalid record"}`)
+	}))
+	defer server.Close()
+
+	client := testAPIClient(t, server.URL)
+	client.sleep = func(time.Duration) { t.Fatal("unexpected retry delay") }
+	err := client.updateZone(apiZone{ID: 1, Name: "example.com"}, recordUpdates{Add: []apiRecord{{Type: "A", Value: "192.0.2.1", TTL: 900}}})
+	if err == nil || updateCalls != 1 {
+		t.Fatalf("updateZone error=%v, calls=%d; want one request and an error", err, updateCalls)
+	}
+}
+
+func TestFormatRetryDiagnosticsIncludesExchangeAndRedactsToken(t *testing.T) {
+	request := httptest.NewRequest(http.MethodPut, "https://api.example.test/v1/dns/zones/example.com", strings.NewReader(`{"records":[]}`))
+	request.Header.Set("Authorization", "Bearer secret-token")
+	request.Header.Set("Content-Type", "application/json")
+	response := &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Status:     "400 Bad Request",
+		Header:     http.Header{"X-Request-ID": []string{"request-123"}},
+		Request:    request,
+		Body:       io.NopCloser(strings.NewReader(`{"code":18002,"desc":"try again later"}`)),
+	}
+
+	diagnostics := formatRetryDiagnostics(response, []byte(`{"records":[]}`), []byte(`{"code":18002,"desc":"try again later"}`))
+	for _, expected := range []string{
+		"PUT /v1/dns/zones/example.com HTTP/1.1",
+		"Authorization: <redacted>",
+		"X-Request-ID: request-123",
+		"400 Bad Request",
+		`{"code":18002,"desc":"try again later"}`,
+	} {
+		if !strings.Contains(diagnostics, expected) {
+			t.Errorf("diagnostics do not contain %q:\n%s", expected, diagnostics)
+		}
+	}
+	if strings.Contains(diagnostics, "secret-token") {
+		t.Error("diagnostics contain the bearer token")
 	}
 }
 

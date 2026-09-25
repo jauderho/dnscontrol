@@ -740,6 +740,7 @@ func makeTests() []*TestGroup {
 				"LOOPIA",       // Their API is so damn slow. Plus, no paging.
 				"NAMEDOTCOM",   // Their API is so damn slow. We'll add it back as needed.
 				"NS1",          // Free acct only allows 50 records, therefore we skip
+				"OPENPROVIDER", // Bulk cleanup intermittently fails with API gateway timeouts.
 				// "ROUTE53",       // Batches up changes in pages.
 				"TRANSIP", // Doesn't page. Works fine.  Due to the slow API we skip.
 				"VERCEL",  // Rate limit 100 creation per hour, 101 needs an hour, too much

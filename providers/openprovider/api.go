@@ -8,17 +8,29 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/DNSControl/dnscontrol/v5/pkg/printer"
 )
 
 const (
 	defaultAPIURL = "https://api.openprovider.eu/v1"
 	pageSize      = 500
 )
+
+var transientRetryBackoffs = [...]time.Duration{
+	time.Second,
+	2 * time.Second,
+	4 * time.Second,
+	8 * time.Second,
+	15 * time.Second,
+	30 * time.Second,
+}
 
 type apiError struct {
 	Operation   string
@@ -43,11 +55,17 @@ func isNotFound(err error) bool {
 	return errors.As(err, &apiErr) && (apiErr.StatusCode == http.StatusNotFound || apiErr.Code == 800 || apiErr.Code == 872)
 }
 
+func isRetryable(err error) bool {
+	var apiErr *apiError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusBadRequest && apiErr.Code == 18002
+}
+
 type apiClient struct {
 	baseURL    string
 	username   string
 	password   string
 	httpClient *http.Client
+	sleep      func(time.Duration)
 
 	tokenMu sync.Mutex
 	token   string
@@ -67,6 +85,7 @@ func newAPIClient(baseURL, username, password string) (*apiClient, error) {
 		httpClient: &http.Client{
 			Timeout: 90 * time.Second,
 		},
+		sleep: time.Sleep,
 	}, nil
 }
 
@@ -159,25 +178,35 @@ func (c *apiClient) doRequest(method, path string, body, result any, operation s
 		return fmt.Errorf("OPENPROVIDER: %s: encode request: %w", operation, err)
 	}
 
-	for attempt := range 2 {
+	unauthorizedRetried := false
+	transientRetries := 0
+	for {
 		token, err := c.getToken()
 		if err != nil {
 			return err
 		}
 
-		status, responseBody, err := c.send(context.Background(), method, path, payload, token)
+		response, responseBody, err := c.send(context.Background(), method, path, payload, token)
 		if err != nil {
 			return fmt.Errorf("OPENPROVIDER: %s: %w", operation, err)
 		}
-		if status == http.StatusUnauthorized && attempt == 0 {
+		status := response.StatusCode
+		if status == http.StatusUnauthorized && !unauthorizedRetried {
 			c.invalidateToken(token)
+			unauthorizedRetried = true
 			continue
 		}
 
-		return decodeResponse(operation, status, responseBody, result)
-	}
+		err = decodeResponse(operation, status, responseBody, result)
+		if !isRetryable(err) || transientRetries >= len(transientRetryBackoffs) {
+			return err
+		}
 
-	panic("unreachable")
+		backoff := transientRetryBackoffs[transientRetries]
+		transientRetries++
+		printer.Warnf("OPENPROVIDER: API temporarily unavailable, retrying in %v (attempt %d/%d)\n%s", backoff, transientRetries, len(transientRetryBackoffs), formatRetryDiagnostics(response, payload, responseBody))
+		c.sleep(backoff)
+	}
 }
 
 func marshalPayload(body any) ([]byte, error) {
@@ -203,13 +232,13 @@ func (c *apiClient) getToken() (string, error) {
 		return "", errors.New("OPENPROVIDER: authenticate: encode request")
 	}
 
-	status, responseBody, err := c.send(context.Background(), http.MethodPost, "/auth/login", payload, "")
+	httpResponse, responseBody, err := c.send(context.Background(), http.MethodPost, "/auth/login", payload, "")
 	if err != nil {
 		return "", fmt.Errorf("OPENPROVIDER: authenticate: %w", err)
 	}
 
 	var response loginResponse
-	if err := decodeResponse("authenticate", status, responseBody, &response); err != nil {
+	if err := decodeResponse("authenticate", httpResponse.StatusCode, responseBody, &response); err != nil {
 		return "", err
 	}
 	if response.Token == "" {
@@ -228,7 +257,7 @@ func (c *apiClient) invalidateToken(token string) {
 	}
 }
 
-func (c *apiClient) send(ctx context.Context, method, path string, payload []byte, token string) (int, []byte, error) {
+func (c *apiClient) send(ctx context.Context, method, path string, payload []byte, token string) (*http.Response, []byte, error) {
 	var body io.Reader
 	if payload != nil {
 		body = bytes.NewReader(payload)
@@ -236,7 +265,7 @@ func (c *apiClient) send(ctx context.Context, method, path string, payload []byt
 
 	request, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, body)
 	if err != nil {
-		return 0, nil, err
+		return nil, nil, err
 	}
 	request.Header.Set("Accept", "application/json")
 	if payload != nil {
@@ -248,15 +277,32 @@ func (c *apiClient) send(ctx context.Context, method, path string, payload []byt
 
 	response, err := c.httpClient.Do(request)
 	if err != nil {
-		return 0, nil, err
+		return nil, nil, err
 	}
 	defer response.Body.Close()
 
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
-		return 0, nil, err
+		return nil, nil, err
 	}
-	return response.StatusCode, responseBody, nil
+	response.Body = io.NopCloser(bytes.NewReader(responseBody))
+	return response, responseBody, nil
+}
+
+func formatRetryDiagnostics(response *http.Response, payload, responseBody []byte) string {
+	request := response.Request.Clone(response.Request.Context())
+	request.Header = response.Request.Header.Clone()
+	if request.Header.Get("Authorization") != "" {
+		request.Header.Set("Authorization", "<redacted>")
+	}
+	request.Body = io.NopCloser(bytes.NewReader(payload))
+
+	requestDump, requestErr := httputil.DumpRequestOut(request, true)
+	responseDump, responseErr := httputil.DumpResponse(response, true)
+	if requestErr != nil || responseErr != nil {
+		return fmt.Sprintf("OPENPROVIDER: could not dump retry exchange (request: %v, response: %v), response body: %q\n", requestErr, responseErr, string(responseBody))
+	}
+	return fmt.Sprintf("OPENPROVIDER: retry exchange:\n%s%s", requestDump, responseDump)
 }
 
 func decodeResponse(operation string, status int, responseBody []byte, result any) error {
