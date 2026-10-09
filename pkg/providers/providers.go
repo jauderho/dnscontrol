@@ -130,7 +130,14 @@ func AuditRecords(dType string, rcs models.Records) []error {
 		}
 		return def.RecordAuditor(rcs)
 	}
-	return []error{fmt.Errorf("unknown DNS service provider type: %q", dType)}
+	// Records tagged with skip_audit (the SKIP_AUDIT modifier) are not audited.
+	auditable := make(models.Records, 0, len(rcs))
+	for _, rc := range rcs {
+		if rc.Metadata["skip_audit"] != "true" {
+			auditable = append(auditable, rc)
+		}
+	}
+	return p.RecordAuditor(auditable)
 }
 
 // None is a basic provider type that does absolutely nothing. Can be useful as a placeholder for third parties or unimplemented providers.
